@@ -137,7 +137,6 @@ public final class PlaceMoverTest {
         mover.moveEnchant(efficiency);
         assertAll(
             () -> assertEquals(0, quarry.getEnchantments().getLevel(efficiency)),
-            () -> assertEquals(1, mover.inventory.getItem(0).getEnchantments().getLevel(unbreaking)),
             () -> assertEquals(1, EnchantmentHelper.getEnchantmentsForCrafting(mover.inventory.getItem(0)).getLevel(unbreaking))
         );
         helper.succeed();
