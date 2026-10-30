@@ -29,7 +29,7 @@ public final class FilterModuleContainer extends AbstractContainerMenu {
     public FilterModuleContainer(int id, Inventory inventory, ItemStack filterModuleItem) {
         super(PlatformAccess.getAccess().registerObjects().filterModuleContainer().get(), id);
         var player = inventory.player;
-        this.container = new ContainerInv(filterModuleItem);
+        this.container = new ContainerInv(filterModuleItem, !player.level().isClientSide());
         this.containerRows = FilterModuleItem.getRowsFromStack(filterModuleItem);
         this.allSlots = containerRows * 9;
         int i = (containerRows - 4) * 18;
@@ -81,7 +81,19 @@ public final class FilterModuleContainer extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return true;
+        // The filter is saved to this exact stack, so the menu is only valid while the player still has it.
+        // A split copy (e.g. a thrown module) must not keep editing rights over the entries.
+        ItemStack stack = container.filterModuleItem;
+        if (stack.isEmpty()) {
+            return false;
+        }
+        Inventory inventory = player.getInventory();
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            if (inventory.getItem(i) == stack) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -92,10 +104,12 @@ public final class FilterModuleContainer extends AbstractContainerMenu {
 
     private static class ContainerInv extends SimpleContainer {
         private final ItemStack filterModuleItem;
+        private final boolean saveOnChange;
 
-        public ContainerInv(ItemStack filterModuleItem) {
+        public ContainerInv(ItemStack filterModuleItem, boolean saveOnChange) {
             super(FilterModuleItem.getRowsFromStack(filterModuleItem) * 9);
             this.filterModuleItem = filterModuleItem;
+            this.saveOnChange = saveOnChange;
             Optional.ofNullable(filterModuleItem.get(QuarryDataComponents.ITEM_KEY_LIST_COMPONENT))
                 .stream()
                 .flatMap(Collection::stream)
@@ -109,8 +123,22 @@ public final class FilterModuleContainer extends AbstractContainerMenu {
         }
 
         @Override
+        public void setChanged() {
+            super.setChanged();
+            // The entries are real items. Save every change at once, so the module never lists an item
+            // that was already taken out (taking it out and then dropping a copy of the module duplicated it).
+            if (saveOnChange) {
+                save();
+            }
+        }
+
+        @Override
         public void stopOpen(ContainerUser user) {
             super.stopOpen(user);
+            save();
+        }
+
+        private void save() {
             if (this.isEmpty()) {
                 filterModuleItem.remove(QuarryDataComponents.ITEM_KEY_LIST_COMPONENT);
             } else {
