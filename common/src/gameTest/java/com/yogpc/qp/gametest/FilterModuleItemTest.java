@@ -4,16 +4,20 @@ import com.yogpc.qp.QuarryDataComponents;
 import com.yogpc.qp.QuarryPlus;
 import com.yogpc.qp.machine.MachineStorage;
 import com.yogpc.qp.machine.module.ConverterModule;
+import com.yogpc.qp.machine.module.FilterModuleContainer;
 import com.yogpc.qp.machine.module.FilterModuleItem;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.GameType;
 
 import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class FilterModuleItemTest {
     static FilterModuleItem item() {
@@ -63,6 +67,31 @@ public final class FilterModuleItemTest {
             var row = FilterModuleItem.getRowsFromStack(stack);
             assertEquals(expected, row);
         }
+        helper.succeed();
+    }
+
+    public static void takeEntrySavesModule(GameTestHelper helper) {
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        var stack = new ItemStack(item());
+        stack.set(QuarryDataComponents.ITEM_KEY_LIST_COMPONENT, List.of(MachineStorage.ItemKey.of(Items.APPLE.getDefaultInstance())));
+        player.getInventory().setItem(0, stack);
+        var menu = new FilterModuleContainer(0, player.getInventory(), stack);
+
+        // The entry is a real item. If the module still lists it, a dropped copy of the module gives it out again.
+        assertEquals(Items.APPLE, menu.slots.get(0).remove(1).getItem());
+        assertTrue(stack.getOrDefault(QuarryDataComponents.ITEM_KEY_LIST_COMPONENT, List.of()).isEmpty());
+        helper.succeed();
+    }
+
+    public static void menuClosesWithoutModule(GameTestHelper helper) {
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        var stack = new ItemStack(item());
+        player.getInventory().setItem(0, stack);
+        var menu = new FilterModuleContainer(0, player.getInventory(), stack);
+        assertTrue(menu.stillValid(player));
+
+        player.getInventory().setItem(0, stack.copy());
+        assertFalse(menu.stillValid(player));
         helper.succeed();
     }
 }
