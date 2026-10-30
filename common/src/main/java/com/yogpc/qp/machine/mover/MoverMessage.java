@@ -59,7 +59,7 @@ public final class MoverMessage implements CustomPacketPayload, OnReceiveWithLev
 
     @Override
     public void onReceive(Level level, Player player) {
-        if (!level.dimension().equals(dim)) {
+        if (!level.dimension().equals(dim) || !OnReceiveWithLevel.canAccess(level, player, pos)) {
             return;
         }
         var entity = level.getBlockEntity(pos);

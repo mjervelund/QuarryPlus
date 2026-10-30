@@ -51,7 +51,7 @@ public final class AdvPumpOpenModuleMessage implements CustomPacketPayload, OnRe
 
     @Override
     public void onReceive(Level level, Player player) {
-        if (!level.dimension().equals(dim)) {
+        if (!level.dimension().equals(dim) || !OnReceiveWithLevel.canAccess(level, player, pos)) {
             return;
         }
         if (level.getBlockEntity(pos) instanceof AdvPumpEntity pump && pump.enabled
