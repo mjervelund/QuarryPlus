@@ -121,4 +121,25 @@ public final class PlaceMoverTest {
         );
         helper.succeed();
     }
+
+    public static void moveMissingEnchantment(GameTestHelper helper) {
+        helper.setBlock(base, PlatformAccess.getAccess().registerObjects().moverBlock().get());
+        MoverEntity mover = helper.getBlockEntity(base, MoverEntity.class);
+
+        var unbreaking = getEnchantment(helper, Enchantments.UNBREAKING);
+        var efficiency = getEnchantment(helper, Enchantments.EFFICIENCY);
+        var stack = EnchantmentHelper.createBook(new EnchantmentInstance(unbreaking, 1));
+        var quarry = new ItemStack(PlatformAccess.getAccess().registerObjects().quarryBlock().get());
+        mover.inventory.setItem(0, stack);
+        mover.inventory.setItem(1, quarry);
+
+        // A client can ask for any enchantment, including one the source doesn't have
+        mover.moveEnchant(efficiency);
+        assertAll(
+            () -> assertEquals(0, quarry.getEnchantments().getLevel(efficiency)),
+            () -> assertEquals(1, mover.inventory.getItem(0).getEnchantments().getLevel(unbreaking)),
+            () -> assertEquals(1, EnchantmentHelper.getEnchantmentsForCrafting(mover.inventory.getItem(0)).getLevel(unbreaking))
+        );
+        helper.succeed();
+    }
 }
