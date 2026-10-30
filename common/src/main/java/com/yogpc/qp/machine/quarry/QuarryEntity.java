@@ -53,7 +53,7 @@ import java.util.stream.IntStream;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
-public abstract class QuarryEntity extends PowerEntity implements ClientSync, QuarryChunkLoader.Holder {
+public abstract class QuarryEntity extends PowerEntity implements ClientSync {
     @NotNull
     public Vec3 head;
     @NotNull
@@ -192,21 +192,6 @@ public abstract class QuarryEntity extends PowerEntity implements ClientSync, Qu
     public void setChanged() {
         super.setChanged();
         updateModules();
-    }
-
-    @Override
-    public QuarryChunkLoader getChunkLoader() {
-        return chunkLoader;
-    }
-
-    @Override
-    public void setChunkLoader(QuarryChunkLoader chunkLoader) {
-        this.chunkLoader = chunkLoader;
-    }
-
-    @Override
-    public boolean needsChunkLoading() {
-        return QuarryState.isWorking(currentState);
     }
 
     @Override
