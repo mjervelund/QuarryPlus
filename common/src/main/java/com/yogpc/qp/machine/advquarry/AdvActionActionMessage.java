@@ -56,7 +56,7 @@ public final class AdvActionActionMessage implements CustomPacketPayload, OnRece
 
     @Override
     public void onReceive(Level level, Player player) {
-        if (!level.dimension().equals(dim)) {
+        if (!level.dimension().equals(dim) || !OnReceiveWithLevel.canAccess(level, player, pos)) {
             return;
         }
         var entity = level.getBlockEntity(pos);

@@ -56,7 +56,7 @@ public final class ChunkMarkerMessage implements CustomPacketPayload, OnReceiveW
 
     @Override
     public void onReceive(Level level, Player player) {
-        if (!level.dimension().equals(dim)) {
+        if (!level.dimension().equals(dim) || !OnReceiveWithLevel.canAccess(level, player, pos)) {
             return;
         }
         if (level.getBlockEntity(pos) instanceof ChunkMarkerEntity marker && marker.enabled) {

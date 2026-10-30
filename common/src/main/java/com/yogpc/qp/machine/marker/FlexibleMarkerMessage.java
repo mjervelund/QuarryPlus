@@ -57,7 +57,7 @@ public final class FlexibleMarkerMessage implements CustomPacketPayload, OnRecei
 
     @Override
     public void onReceive(Level level, Player player) {
-        if (!level.dimension().equals(dim)) {
+        if (!level.dimension().equals(dim) || !OnReceiveWithLevel.canAccess(level, player, pos)) {
             return;
         }
         if (level.getBlockEntity(pos) instanceof FlexibleMarkerEntity marker && marker.enabled) {
