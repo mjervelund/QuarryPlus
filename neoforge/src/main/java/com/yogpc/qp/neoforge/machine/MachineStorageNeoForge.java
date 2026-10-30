@@ -23,7 +23,15 @@ public final class MachineStorageNeoForge extends MachineStorage {
     }
 
     public static <T> ResourceHandler<ItemResource> createItemHandler(MachineStorageHolder<T> holder, T object) {
-        return new ItemStorageImpl<>(holder, object);
+        return new ItemStorageImpl<>(holder, object, true);
+    }
+
+    /**
+     * Machine output: items can be taken out but nothing can be put in. Exposing the output this way lets pipes and
+     * other item transport connect to the machine (they only connect to item handlers) and pull from it.
+     */
+    public static <T> ResourceHandler<ItemResource> createExtractOnlyItemHandler(MachineStorageHolder<T> holder, T object) {
+        return new ItemStorageImpl<>(holder, object, false);
     }
 
     public static <T> ResourceHandler<FluidResource> createFluidHandler(MachineStorageHolder<T> holder, T object) {
@@ -33,10 +41,12 @@ public final class MachineStorageNeoForge extends MachineStorage {
     private static final class ItemStorageImpl<T> extends SnapshotJournal<Object2LongLinkedOpenHashMap<ItemKey>> implements ResourceHandler<ItemResource> {
         private final MachineStorageHolder<T> holder;
         private final T object;
+        private final boolean insertable;
 
-        private ItemStorageImpl(MachineStorageHolder<T> holder, T object) {
+        private ItemStorageImpl(MachineStorageHolder<T> holder, T object, boolean insertable) {
             this.holder = holder;
             this.object = object;
+            this.insertable = insertable;
         }
 
         private MachineStorageNeoForge storage() {
@@ -45,7 +55,7 @@ public final class MachineStorageNeoForge extends MachineStorage {
 
         @Override
         public int size() {
-            return storage().itemSlots() + 1; // Additional 1 for empty slot
+            return storage().itemSlots() + (insertable ? 1 : 0); // Additional 1 for empty slot
         }
 
         @Override
@@ -60,16 +70,17 @@ public final class MachineStorageNeoForge extends MachineStorage {
 
         @Override
         public long getCapacityAsLong(int index, ItemResource resource) {
-            return Long.MAX_VALUE;
+            return insertable ? Long.MAX_VALUE : getAmountAsLong(index);
         }
 
         @Override
         public boolean isValid(int index, ItemResource resource) {
-            return true;
+            return insertable;
         }
 
         @Override
         public int insert(int index, ItemResource resource, int amount, TransactionContext transaction) {
+            if (!insertable) return 0;
             updateSnapshots(transaction);
             storage().addItem(resource.toStack(amount));
             return amount;
@@ -77,6 +88,8 @@ public final class MachineStorageNeoForge extends MachineStorage {
 
         @Override
         public int extract(int index, ItemResource resource, int amount, TransactionContext transaction) {
+            // Only the resource asked for: index order shifts as stacks are used up.
+            if (resource.isEmpty() || !resource.equals(getResource(index))) return 0;
             updateSnapshots(transaction);
             return storage().extractItemByIndex(index, amount, true).getCount();
         }

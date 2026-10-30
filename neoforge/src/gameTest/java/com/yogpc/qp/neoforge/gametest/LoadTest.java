@@ -45,6 +45,7 @@ public final class LoadTest {
             commonTests().stream(),
             placeTests().stream(),
             MachineEnergyHandlerTest.tests().stream(),
+            MachineItemHandlerTest.tests().stream(),
             MachineStorageNeoForgeTest.tests().stream(),
             AdvPumpFluidHandlerTest.tests().stream(),
             Stream.of(TestFunction.create(QuarryPlus.modID, "load", LoadTest::load))
