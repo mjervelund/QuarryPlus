@@ -165,6 +165,8 @@ public final class MoverEntity extends QpEntity implements ClientSync {
     @VisibleForTesting
     static Pair<ItemStack, ItemStack> moveEnchantment(@Nullable Holder<Enchantment> enchantment, ItemStack from, ItemStack to, @Nullable Predicate<Holder<Enchantment>> predicate, Runnable after) {
         if (enchantment == null || from.isEmpty() || to.isEmpty()) return Pair.of(from, to);
+        // The enchantment comes from a client message, so check that the source really has it.
+        if (EnchantmentHelper.getEnchantmentsForCrafting(from).getLevel(enchantment) <= 0) return Pair.of(from, to);
         if (canMoveEnchantment(predicate, EnchantmentHelper.getEnchantmentsForCrafting(to), enchantment)) {
             var right = upLevel(enchantment, to);
             var left = downLevel(enchantment, from);
