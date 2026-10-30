@@ -18,6 +18,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.enchantment.Enchantment;
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.List;
@@ -79,6 +80,12 @@ public final class GameTestFunctions {
                 TestFunction.createWithStructure(QuarryPlus.modID, batchName, CaseFormat.LOWER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, "%s_%s".formatted(m.getDeclaringClass().getSimpleName(), m.getName())), structureName, g -> {
                     try {
                         m.invoke(null, g);
+                    } catch (InvocationTargetException e) {
+                        // Unwrap, or the report only says "InvocationTargetException" and hides the real failure
+                        switch (e.getCause()) {
+                            case RuntimeException r -> throw r;
+                            case null, default -> throw new RuntimeException(e.getCause() == null ? e : e.getCause());
+                        }
                     } catch (ReflectiveOperationException | AssertionError e) {
                         throw new RuntimeException(e);
                     }

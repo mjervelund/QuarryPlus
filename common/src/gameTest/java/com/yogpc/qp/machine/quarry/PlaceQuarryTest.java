@@ -145,7 +145,10 @@ public final class PlaceQuarryTest {
         var secondPos = (helper.absolutePos(firstPos).getX() & 15) == 15 ? base : base.east(2);
         var chunkPos = ChunkPos.containing(helper.absolutePos(firstPos));
         assertEquals(chunkPos, ChunkPos.containing(helper.absolutePos(secondPos)));
-        assertFalse(level.getForceLoadedChunks().contains(chunkPos.pack()));
+        // The test instance block entity force-loads every chunk of the structure (26.x), so this
+        // chunk is already in the forced set, which is exactly the situation the handover fixes:
+        // a quarry that starts working in an already force-loaded chunk gets None.
+        assertTrue(level.getForceLoadedChunks().contains(chunkPos.pack()));
 
         helper.setBlock(firstPos, PlatformAccess.getAccess().registerObjects().quarryBlock().get());
         helper.setBlock(secondPos, PlatformAccess.getAccess().registerObjects().quarryBlock().get());
@@ -154,17 +157,22 @@ public final class PlaceQuarryTest {
 
         first.setState(QuarryState.MOVE_HEAD, helper.getBlockState(firstPos));
         second.setState(QuarryState.MOVE_HEAD, helper.getBlockState(secondPos));
-        assertTrue(level.getForceLoadedChunks().contains(chunkPos.pack()));
-        assertEquals(new QuarryChunkLoader.Load(helper.absolutePos(firstPos)), first.getChunkLoader());
+        assertEquals(QuarryChunkLoader.None.INSTANCE, first.getChunkLoader());
         assertEquals(QuarryChunkLoader.None.INSTANCE, second.getChunkLoader());
+        // Give the first quarry the chunk load, as if it had forced the chunk when it started
+        first.setChunkLoader(new QuarryChunkLoader.Load(helper.absolutePos(firstPos)));
 
-        // The first one finishes: the chunk stays loaded for the second one
+        // The first one finishes: the chunk load is handed to the second one instead of being removed
         first.setState(QuarryState.FINISHED, helper.getBlockState(firstPos));
         assertTrue(level.getForceLoadedChunks().contains(chunkPos.pack()));
         assertEquals(new QuarryChunkLoader.Load(helper.absolutePos(secondPos)), second.getChunkLoader());
 
+        // The second one finishes: no working machine is left, the forced load is removed
         second.setState(QuarryState.FINISHED, helper.getBlockState(secondPos));
         assertFalse(level.getForceLoadedChunks().contains(chunkPos.pack()));
+        // Restore the test structure's forced chunk: tests in this batch whose structure shares the
+        // chunk stop ticking without it and the batch never finishes
+        level.setChunkForced(chunkPos.x(), chunkPos.z(), true);
         helper.succeed();
     }
 }
