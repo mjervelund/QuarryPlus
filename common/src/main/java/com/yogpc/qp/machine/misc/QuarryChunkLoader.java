@@ -29,6 +29,17 @@ public sealed interface QuarryChunkLoader {
         return new Load(pos);
     }
 
+    /**
+     * A machine which keeps its chunk loaded while working.
+     */
+    interface Holder {
+        QuarryChunkLoader getChunkLoader();
+
+        void setChunkLoader(QuarryChunkLoader chunkLoader);
+
+        boolean needsChunkLoading();
+    }
+
     void makeChunkLoaded(ServerLevel level);
 
     void makeChunkUnLoaded(ServerLevel level);
@@ -77,6 +88,21 @@ public sealed interface QuarryChunkLoader {
         @Override
         public void makeChunkUnLoaded(ServerLevel level) {
             var chunkPos = ChunkPos.containing(pos);
+            // Another working machine in this chunk got None in QuarryChunkLoader#of because we had already forced it.
+            // Hand the loading over to it instead of letting its chunk unload.
+            var chunk = level.getChunkSource().getChunkNow(chunkPos.x(), chunkPos.z());
+            if (chunk != null) {
+                for (var blockEntity : chunk.getBlockEntities().values()) {
+                    if (!blockEntity.isRemoved() && !blockEntity.getBlockPos().equals(pos)
+                        && blockEntity instanceof Holder holder && holder.needsChunkLoading()
+                        && holder.getChunkLoader() == None.INSTANCE) {
+                        holder.setChunkLoader(new Load(blockEntity.getBlockPos().immutable()));
+                        blockEntity.setChanged();
+                        QuarryLogger.LOGGER.info(QuarryLogger.LOG4J_CHUNK_LOADER, "Hand over chunk loading at x={}, z={} to {}", chunkPos.x(), chunkPos.z(), blockEntity.getBlockPos().toShortString());
+                        return;
+                    }
+                }
+            }
             level.setChunkForced(chunkPos.x(), chunkPos.z(), false);
             QuarryLogger.LOGGER.info(QuarryLogger.LOG4J_CHUNK_LOADER, "Remove chunk loading at x={}, z={}", chunkPos.x(), chunkPos.z());
         }
