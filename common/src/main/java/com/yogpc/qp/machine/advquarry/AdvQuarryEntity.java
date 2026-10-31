@@ -51,7 +51,7 @@ import java.util.function.Predicate;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-public abstract class AdvQuarryEntity extends PowerEntity implements ClientSync {
+public abstract class AdvQuarryEntity extends PowerEntity implements ClientSync, QuarryChunkLoader.Holder {
 
     @NotNull
     AdvQuarryState currentState = AdvQuarryState.FINISHED;
@@ -158,6 +158,21 @@ public abstract class AdvQuarryEntity extends PowerEntity implements ClientSync 
     public void setChanged() {
         super.setChanged();
         updateModules();
+    }
+
+    @Override
+    public QuarryChunkLoader getChunkLoader() {
+        return chunkLoader;
+    }
+
+    @Override
+    public void setChunkLoader(QuarryChunkLoader chunkLoader) {
+        this.chunkLoader = chunkLoader;
+    }
+
+    @Override
+    public boolean needsChunkLoading() {
+        return AdvQuarryState.isWorking(currentState);
     }
 
     @Override

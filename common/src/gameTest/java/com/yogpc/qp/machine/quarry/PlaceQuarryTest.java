@@ -3,6 +3,7 @@ package com.yogpc.qp.machine.quarry;
 import com.yogpc.qp.PlatformAccess;
 import com.yogpc.qp.gametest.GameTestFunctions;
 import com.yogpc.qp.machine.PowerEntity;
+import com.yogpc.qp.machine.misc.QuarryChunkLoader;
 import com.yogpc.qp.machine.module.ModuleInventoryHolder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -12,6 +13,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.storage.TagValueInput;
@@ -134,6 +136,35 @@ public final class PlaceQuarryTest {
         assertTrue(moduleInv.isPresent());
         assertTrue(moduleInv.get().getModules().isEmpty());
 
+        helper.succeed();
+    }
+
+    public static void handOverChunkLoading(GameTestHelper helper) {
+        var level = helper.getLevel();
+        var firstPos = base.east();
+        var secondPos = (helper.absolutePos(firstPos).getX() & 15) == 15 ? base : base.east(2);
+        var chunkPos = ChunkPos.containing(helper.absolutePos(firstPos));
+        assertEquals(chunkPos, ChunkPos.containing(helper.absolutePos(secondPos)));
+        assertFalse(level.getForceLoadedChunks().contains(chunkPos.pack()));
+
+        helper.setBlock(firstPos, PlatformAccess.getAccess().registerObjects().quarryBlock().get());
+        helper.setBlock(secondPos, PlatformAccess.getAccess().registerObjects().quarryBlock().get());
+        QuarryEntity first = helper.getBlockEntity(firstPos, QuarryEntity.class);
+        QuarryEntity second = helper.getBlockEntity(secondPos, QuarryEntity.class);
+
+        first.setState(QuarryState.MOVE_HEAD, helper.getBlockState(firstPos));
+        second.setState(QuarryState.MOVE_HEAD, helper.getBlockState(secondPos));
+        assertTrue(level.getForceLoadedChunks().contains(chunkPos.pack()));
+        assertEquals(new QuarryChunkLoader.Load(helper.absolutePos(firstPos)), first.getChunkLoader());
+        assertEquals(QuarryChunkLoader.None.INSTANCE, second.getChunkLoader());
+
+        // The first one finishes: the chunk stays loaded for the second one
+        first.setState(QuarryState.FINISHED, helper.getBlockState(firstPos));
+        assertTrue(level.getForceLoadedChunks().contains(chunkPos.pack()));
+        assertEquals(new QuarryChunkLoader.Load(helper.absolutePos(secondPos)), second.getChunkLoader());
+
+        second.setState(QuarryState.FINISHED, helper.getBlockState(secondPos));
+        assertFalse(level.getForceLoadedChunks().contains(chunkPos.pack()));
         helper.succeed();
     }
 }
