@@ -339,16 +339,20 @@ public class MachineStorage {
             return ItemStack.EMPTY;
         }
         var e = Iterators.get(items.object2LongEntrySet().iterator(), i);
-        var toExtractAmount = Math.min(amount, e.getLongValue());
+        // The entry is a view into the map: read key and count before put/removeLong change it
+        // (after removeLong the view's key is null).
+        var key = e.getKey();
+        var count = e.getLongValue();
+        var toExtractAmount = Math.min(amount, count);
         if (execute) {
-            if (e.getLongValue() - toExtractAmount > 0) {
-                items.put(e.getKey(), e.getLongValue() - toExtractAmount);
+            if (count - toExtractAmount > 0) {
+                items.put(key, count - toExtractAmount);
             } else {
-                items.removeLong(e.getKey());
+                items.removeLong(key);
             }
             notifyUpdate();
         }
-        return e.getKey().toStack(Math.clamp(toExtractAmount, 0, Integer.MAX_VALUE));
+        return key.toStack(Math.clamp(toExtractAmount, 0, Integer.MAX_VALUE));
     }
 
     public static <T extends BlockEntity> BlockEntityTicker<T> pushItemTicker() {
